@@ -2,23 +2,23 @@
 
 ## Current Phase
 
-Phase 1 — market-data foundation (Task 003 complete and reviewed).
+Phase 1 — market-data foundation (Task 004 complete and reviewed).
 
 ## Current Objective
 
-The offline Binance Spot BTCUSDT 1h raw-kline adapter is implemented and validated.
+Deterministic public Binance Spot BTCUSDT 1h historical acquisition is implemented and reviewed.
 
 ## Scope
 
-BTC/USDT spot research on approximately hourly bars, one venue, long or flat, no leverage, and offline validation only.
+BTC/USDT spot research on hourly bars from one public venue, long or flat, no leverage, and historical validation only.
 
 ## Implemented
 
-Repository foundations, the reviewed immutable OHLCV contract and hourly sequence validator, and an offline Binance Spot BTCUSDT 1h adapter. The adapter normalizes kline open time from integer Unix milliseconds to an aware UTC timestamp and converts OHLCV decimal strings into the trusted `OHLCVBar` contract.
+Repository foundations, the reviewed OHLCV contract, hourly sequence validator, and Binance raw-kline adapter, plus deterministic public REST acquisition with explicit UTC range semantics, time-based pagination, and finite timeouts. Explicit `as_of` semantics ensure that only fully closed candles are eligible. Acquisition results expose observed-sequence quality and requested-range coverage independently.
 
 ## Validated
 
-The complete test suite currently passes 54 tests. Validation covers the existing OHLCV and sequence contracts plus Binance raw-record shape, UTC Unix-millisecond conversion, exact decimal parsing, extra-field tolerance, domain-validation delegation, and input immutability.
+The complete test suite currently passes 85 tests. Validation covers the existing data contracts plus half-open ranges, timezone normalization, closed-candle protection, exact request construction, pagination beyond 1000 bars, remote-response failures, non-progress defense, out-of-range rejection, sequence-quality reporting, and requested-range coverage without repair.
 
 ## Experiments Run
 
@@ -26,16 +26,16 @@ None.
 
 ## Decisions Made
 
-Initial decisions and the Task 002 and Task 003 market-data boundary decisions are recorded in `DECISIONS.md`.
+Initial decisions and the Task 002 through Task 004 market-data decisions are recorded in `DECISIONS.md`.
 
 ## Known Risks / Open Questions
 
 - Cost and execution assumptions are not yet specified.
 - Formal benchmark and evaluation protocols remain to be designed.
 - Data licensing, retention, and quality requirements remain open.
-- Historical market-data acquisition, network transport, and persistence are not implemented.
-- No network acquisition, persistence, strategies, backtesting, agents, execution, paper trading, or live trading exists.
+- Historical acquisition currently targets only the fixed public Binance Spot BTCUSDT 1h contract; data licensing remains open.
+- No persistence, retries or backoff, strategies, backtesting, agents, execution, paper trading, or live trading exists.
 
 ## Next Actions
 
-Define the next bounded historical market-data acquisition milestone.
+Perform a controlled live-source smoke validation before designing persistence.

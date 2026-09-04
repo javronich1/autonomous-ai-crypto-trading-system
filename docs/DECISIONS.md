@@ -33,3 +33,14 @@ Decisions are append-only in spirit: later changes should add a superseding entr
 | Use kline open time as the canonical bar timestamp | The bar is identified by the start of its observation interval and converted from Unix milliseconds directly to aware UTC. |
 | Normalize venue-specific raw records before they enter the core domain | Binance field positions and decimal strings remain at the adapter boundary; downstream code receives the existing trusted `OHLCVBar`. |
 | Keep ingestion and network transport separate from parsing and normalization | Offline deterministic parsing can be tested independently; acquisition remains explicitly deferred to a later bounded task. |
+
+## Task 004 closed-candle historical acquisition — 2026-09-04
+
+| Decision | Rationale |
+|---|---|
+| Define historical research ranges as half-open `[start, end)` intervals | Exclusive upper bounds make hourly membership unambiguous; Binance's inclusive `endTime` is derived as one millisecond before the effective end. |
+| Admit only fully closed hourly candles | Capping the effective end at the UTC current-hour start prevents an incomplete observation from entering historical research data. |
+| Require an explicit `as_of` datetime | The closed-candle boundary remains deterministic and reproducible rather than depending on a hidden system clock read. |
+| Keep Binance REST transport separate from venue parsing and domain validation | Acquisition delegates every raw record to the reviewed adapter and returns the existing sequence-quality result. |
+| Defer automatic retries and backoff | HTTP and rate-limit failures surface immediately; retry timing and policy require a separate reviewed milestone. |
+| Report sequence quality and requested-range coverage separately | A returned sequence can be internally continuous while omitting leading or trailing expected hours, so acquisition coverage compares unique aligned observations with the effective requested grid without changing or repairing the bars. |
