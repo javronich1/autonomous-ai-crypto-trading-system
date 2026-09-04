@@ -24,3 +24,12 @@ Decisions are append-only in spirit: later changes should add a superseding entr
 | Normalize timezone-aware timestamps to UTC and reject naive timestamps | Aware source timestamps can represent the same instant unambiguously; naive timestamps cannot, so assuming UTC would hide a data-quality problem. |
 | Report sequence problems as immutable, machine-readable issues | Future ingestion can inspect duplicates, ordering errors, misalignment, and gaps without parsing logs or mutating the observations. |
 | Treat gaps as observations, not repair instructions | Missing market data may be legitimate or source-specific; the contract must not invent candles through filling or interpolation. |
+
+## Task 003 Binance Spot raw-kline boundary — 2026-09-04
+
+| Decision | Rationale |
+|---|---|
+| Use Binance Spot BTCUSDT 1h as the initial venue-specific market-data source contract | This fixes the first raw input shape while keeping the research scope to one spot market and one hourly interval. |
+| Use kline open time as the canonical bar timestamp | The bar is identified by the start of its observation interval and converted from Unix milliseconds directly to aware UTC. |
+| Normalize venue-specific raw records before they enter the core domain | Binance field positions and decimal strings remain at the adapter boundary; downstream code receives the existing trusted `OHLCVBar`. |
+| Keep ingestion and network transport separate from parsing and normalization | Offline deterministic parsing can be tested independently; acquisition remains explicitly deferred to a later bounded task. |
