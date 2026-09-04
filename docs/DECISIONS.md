@@ -15,3 +15,12 @@ Decisions are append-only in spirit: later changes should add a superseding entr
 | Build deterministic infrastructure before agentic complexity | Complexity must solve a demonstrated problem and provide measurable value. |
 | Require realistic net-of-cost evaluation | Fees, spread, and slippage can invalidate apparent gross performance. |
 | Prohibit live-money trading during research development | Offline rigor must precede paper trading, and paper validation must precede any separately authorized live phase. |
+
+## Task 002 market-data contract — 2026-09-04
+
+| Decision | Rationale |
+|---|---|
+| Require `Decimal` OHLCV values at the internal contract boundary | Exact decimal semantics avoid binary floating-point surprises and implicit conversion rules in financial-data validation. |
+| Normalize timezone-aware timestamps to UTC and reject naive timestamps | Aware source timestamps can represent the same instant unambiguously; naive timestamps cannot, so assuming UTC would hide a data-quality problem. |
+| Report sequence problems as immutable, machine-readable issues | Future ingestion can inspect duplicates, ordering errors, misalignment, and gaps without parsing logs or mutating the observations. |
+| Treat gaps as observations, not repair instructions | Missing market data may be legitimate or source-specific; the contract must not invent candles through filling or interpolation. |

@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 0 — repository foundation (Task 001).
+Phase 1 — market-data foundation (Task 002 complete and reviewed).
 
 ## Current Objective
 
-Establish a professional, importable Python skeleton and the documentation and guardrails required for future research.
+The deterministic, strongly validated internal contract for historical hourly OHLCV bars is complete.
 
 ## Scope
 
@@ -14,11 +14,11 @@ BTC/USDT spot research on approximately hourly bars, one venue, long or flat, no
 
 ## Implemented
 
-Repository documentation, conceptual package boundaries, packaging metadata, and a package import smoke test.
+Repository foundations plus an immutable OHLCV market-data contract using exact decimal values, explicit UTC timestamp semantics, and structured deterministic hourly sequence validation.
 
 ## Validated
 
-Top-level package import and repository structure only.
+The complete test suite currently passes 32 tests. Validation covers the top-level package import, individual OHLCV invariants, UTC normalization and naive-timestamp rejection, hourly boundary alignment, strict chronology, duplicate detection, and explicit gap reporting without data filling.
 
 ## Experiments Run
 
@@ -26,7 +26,7 @@ None.
 
 ## Decisions Made
 
-Initial decisions are recorded in `DECISIONS.md`.
+Initial decisions and the Task 002 market-data contract decisions are recorded in `DECISIONS.md`.
 
 ## Known Risks / Open Questions
 
@@ -34,7 +34,9 @@ Initial decisions are recorded in `DECISIONS.md`.
 - Cost and execution assumptions are not yet specified.
 - Formal benchmark and evaluation protocols remain to be designed.
 - Data licensing, retention, and quality requirements remain open.
+- Market-data acquisition, source-specific normalization, and persistence are not implemented.
+- No ingestion, network integration, persistence, strategies, backtesting, agents, or trading functionality exists.
 
 ## Next Actions
 
-Await human review and define the next bounded milestone. No trading functionality has been implemented.
+Define the next bounded market-data ingestion milestone.
