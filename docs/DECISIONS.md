@@ -61,3 +61,16 @@ Decisions are append-only in spirit: later changes should add a superseding entr
 | Explain empty results using existing acquisition coverage and anchor cap wording to explicit `as_of` | Zero eligible hours and eligible hours with absent source observations have different meanings. This clarifies presentation without changing the reviewed data contract or closed-candle rules. |
 | Label retained results as the last successful fetch with their original boundaries | Editing controls must not imply that displayed observations were fetched for the new request. Failed fetches continue to clear prior results. |
 | Exercise optional UI integration offline with AppTest and fake acquisition | Verify interaction and rendered data without external services; skip the integration module when UI packages are absent. Browser validation remains a separate review gate for layout and live-source behavior. |
+
+## Task 005A bounded snapshot design — 2026-09-07
+
+| Decision | Rationale |
+|---|---|
+| Treat Task 005A as design only and Task 005B as implementation and verification | Keeps persistence bounded and prevents the design milestone from implying delivered code. Task 004.5 remains complete. |
+| Snapshot only `BinanceKlineAcquisitionResult` for fixed Binance Spot `BTCUSDT` `1h` data in a single standard-library UTF-8 JSON file | Preserves determinism, keeps the contract narrow, and avoids introducing storage engines or dependencies before the design is proven. |
+| Expose `serialize_snapshot`, `deserialize_snapshot`, `save_snapshot`, `load_snapshot`, `SnapshotValidationError`, and `SnapshotIOError` in `crypto_trader.data.snapshots` | Provides a minimal public surface for deterministic snapshot roundtrips and filesystem handling. |
+| Canonicalize payload bytes with sorted-key JSON, exact decimal strings, and SHA-256 over the canonical payload | Makes identical normalized inputs produce identical bytes and allows accidental-change detection without claiming authenticity or provenance. |
+| Revalidate on both save and load, and share boundary and coverage helpers with acquisition where needed | The acquisition result dataclass does not validate constructor metadata on its own, so persistence must not trust forged fields. Shared helpers avoid a second quantitative rule implementation. |
+| Use atomic local POSIX publication with hard-link fail-if-exists semantics | Ensures exactly one concurrent publisher can win and prevents silent overwrites or replace-in-place behavior. |
+| Keep persistence offline and local-only, with UI integration separately scoped | UI integration, network access, retries, caches, and repair logic are intentionally deferred to later work. |
+| Report post-publication cleanup failure through `SnapshotCleanupError` with `published=True` and both paths | Callers can distinguish a saved snapshot from a failed publication without depending on warning filters. |
