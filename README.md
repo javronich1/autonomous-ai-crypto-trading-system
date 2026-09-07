@@ -6,7 +6,7 @@ It is **not** a guaranteed-profit trading bot. Profitability is an empirical hyp
 
 ## Current status
 
-The repository is in **Phase 0: foundation**. It contains documentation, package boundaries, and a minimal import smoke test. No market integration, strategy, backtest, risk, execution, paper-trading, or real-money functionality exists.
+The repository is in **Phase 1: market-data foundation**. The reviewed pipeline provides an exact-decimal OHLCV contract, hourly sequence validation, a Binance Spot adapter, and historical acquisition with explicit UTC boundaries and requested-range coverage. Task 004.5 adds a reviewed local read-only research terminal. No persistence, strategy, backtest, risk engine, execution, paper-trading, or real-money functionality exists.
 
 ## Initial scope
 
@@ -44,4 +44,22 @@ After installing the optional development dependencies in an isolated environmen
 python -m pytest
 ```
 
+With the optional `ui` dependencies installed, the suite also exercises the terminal through Streamlit AppTest with fake acquisition and blocked network access. These integration tests skip when Streamlit or Plotly is absent; core tests remain available.
+
 No real-money functionality currently exists, and none should be inferred from the future-facing directory names.
+
+## Research Terminal
+
+Install the optional local UI dependencies into the active environment:
+
+```bash
+python -m pip install -e ".[ui]"
+```
+
+Launch the read-only terminal from the repository root:
+
+```bash
+streamlit run apps/research_terminal.py
+```
+
+The terminal is for historical market-data research only. It has no account access, persistence, strategy, order, execution, paper-trading, or live-trading functionality.

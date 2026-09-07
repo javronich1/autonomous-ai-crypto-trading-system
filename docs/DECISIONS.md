@@ -44,3 +44,20 @@ Decisions are append-only in spirit: later changes should add a superseding entr
 | Keep Binance REST transport separate from venue parsing and domain validation | Acquisition delegates every raw record to the reviewed adapter and returns the existing sequence-quality result. |
 | Defer automatic retries and backoff | HTTP and rate-limit failures surface immediately; retry timing and policy require a separate reviewed milestone. |
 | Report sequence quality and requested-range coverage separately | A returned sequence can be internally continuous while omitting leading or trailing expected hours, so acquisition coverage compares unique aligned observations with the effective requested grid without changing or repairing the bars. |
+
+## Task 004.5 quantitative research terminal — 2026-09-04
+
+| Decision | Rationale |
+|---|---|
+| Keep the research terminal read-only and observational | The interface inspects trusted historical data and quality results without persistence, portfolio state, signals, or execution controls. |
+| Make the UI consume reviewed domain and acquisition interfaces | Quantitative rules remain outside Streamlit; pure presentation helpers perform only display formatting and chart-boundary conversion. |
+| Keep Streamlit and Plotly in an optional `ui` dependency group | Core market-data contracts and automated tests remain independent of visualization packages. |
+| Reserve AI copilot space without implementing AI | The layout can communicate a future architectural boundary while accurately stating that no LLM or analytical agent is active. |
+
+## Task 004.5 review corrections — 2026-09-07
+
+| Decision | Rationale |
+|---|---|
+| Explain empty results using existing acquisition coverage and anchor cap wording to explicit `as_of` | Zero eligible hours and eligible hours with absent source observations have different meanings. This clarifies presentation without changing the reviewed data contract or closed-candle rules. |
+| Label retained results as the last successful fetch with their original boundaries | Editing controls must not imply that displayed observations were fetched for the new request. Failed fetches continue to clear prior results. |
+| Exercise optional UI integration offline with AppTest and fake acquisition | Verify interaction and rendered data without external services; skip the integration module when UI packages are absent. Browser validation remains a separate review gate for layout and live-source behavior. |
