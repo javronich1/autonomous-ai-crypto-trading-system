@@ -279,3 +279,143 @@ def test_control_changes_keep_original_result_boundaries_and_notice(fetch: Mock)
     assert "Showing the last successful fetch" in captions
     assert "Changes to acquisition controls apply only to the next explicit fetch" in captions
     assert "AS OF USED · 2024-01-01 03:30:00 UTC" in captions
+
+
+@pytest.fixture
+def snapshot_upload(monkeypatch: pytest.MonkeyPatch) -> tuple[Mock, Mock]:
+    """Mock the unsupported uploader while exercising the real byte validator."""
+    from io import BytesIO
+    import streamlit
+    import crypto_trader.data.snapshots as snapshots
+
+    uploader = Mock(return_value=BytesIO(snapshots.serialize_snapshot(acquisition_result())))
+    decoder = Mock(wraps=snapshots.deserialize_snapshot)
+    monkeypatch.setattr(
+        snapshots, "load_snapshot", Mock(side_effect=AssertionError("No snapshot disk reads")),
+    )
+    monkeypatch.setattr(
+        snapshots, "save_snapshot", Mock(side_effect=AssertionError("No snapshot disk writes")),
+    )
+    monkeypatch.setattr(streamlit, "file_uploader", uploader)
+    monkeypatch.setattr(snapshots, "deserialize_snapshot", decoder)
+    return uploader, decoder
+
+
+def test_snapshot_explicit_load_matches_fetch_exactly(
+    fetch: Mock, snapshot_upload: tuple[Mock, Mock]
+) -> None:
+    uploader, decoder = snapshot_upload
+    app = manual_request().button[0].click().run()
+    figure = app.get("plotly_chart")[0].proto.spec
+    table = app.dataframe[0].value.copy()
+    displayed_metrics = metrics(app)
+    assert app.session_state["provenance"] == "binance"
+    fetch.reset_mock()
+    app.radio[0].set_value("Saved snapshot").run()
+    assert not app.exception
+    assert not app.get("plotly_chart")
+    assert "LOAD SNAPSHOT" in app.info[0].value
+    assert "provenance" not in app.session_state
+    uploader.assert_called_with("SNAPSHOT JSON", type=["json"], max_upload_size=10)
+    decoder.assert_not_called()
+    app.run()
+    decoder.assert_not_called()
+    app.button[0].click().run()
+    assert not app.exception
+    decoder.assert_called_once_with(uploader.return_value.getvalue())
+    assert app.session_state["provenance"] == "snapshot"
+    assert app.get("plotly_chart")[0].proto.spec == figure
+    assert app.dataframe[0].value.equals(table)
+    assert metrics(app) == displayed_metrics
+    captions = " ".join(c.value for c in app.caption)
+    assert "Showing the last validated snapshot" in captions
+    assert "File changes apply only to the next explicit load" in captions
+    assert "checksum is not authentication" in captions
+    assert "Showing the last successful fetch" not in captions
+    app.run()
+    assert decoder.call_count == 1
+    fetch.assert_not_called()
+
+
+def test_snapshot_selection_failure_recovery_and_mode_switch(
+    fetch: Mock, snapshot_upload: tuple[Mock, Mock]
+) -> None:
+    from io import BytesIO
+
+    uploader, decoder = snapshot_upload
+    valid_upload = uploader.return_value
+    app = AppTest.from_file(APP).run()
+    assert app.radio[0].value == "Public Binance"
+    app.radio[0].set_value("Saved snapshot").run()
+    app.button[0].click().run()
+    original_figure = app.get("plotly_chart")[0].proto.spec
+    original_table = app.dataframe[0].value.copy()
+    original_metrics = metrics(app)
+    corrupt = json.loads(valid_upload.getvalue())
+    corrupt["payload"]["bars"][0]["close"] = "42301"
+    uploader.return_value = BytesIO(json.dumps(corrupt).encode("utf-8"))
+    app.run()
+    assert decoder.call_count == 1
+    assert app.get("plotly_chart")[0].proto.spec == original_figure
+    assert app.dataframe[0].value.equals(original_table)
+    assert metrics(app) == original_metrics
+    assert app.session_state["provenance"] == "snapshot"
+    app.button[0].click().run()
+    assert not app.exception
+    assert app.error[0].value.startswith("SNAPSHOT LOAD FAILED ·")
+    assert not app.get("plotly_chart") and not app.dataframe and not app.metric
+    assert "acquisition_result" not in app.session_state
+    assert "provenance" not in app.session_state
+    app.run()
+    assert decoder.call_count == 2
+    assert app.error
+    uploader.return_value = valid_upload
+    app.run()
+    assert app.error
+    app.button[0].click().run()
+    assert not app.exception and not app.error
+    assert app.session_state["provenance"] == "snapshot"
+    assert app.get("plotly_chart")[0].proto.spec == original_figure
+    uploader.return_value = None
+    app.run()
+    assert app.button[0].disabled
+    assert app.get("plotly_chart")[0].proto.spec == original_figure
+    app.radio[0].set_value("Public Binance").run()
+    assert not app.exception and not app.error
+    assert not app.get("plotly_chart") and not app.dataframe and not app.metric
+    assert "provenance" not in app.session_state
+    assert "FETCH HISTORICAL DATA" in app.info[0].value
+    app.radio[0].set_value("Saved snapshot").run()
+    assert app.button[0].disabled
+    assert not app.get("plotly_chart")
+    uploader.return_value = BytesIO(b'corrupt')
+    app.run().button[0].click().run()
+    assert app.error
+    app.radio[0].set_value("Public Binance").run()
+    assert not app.error
+    assert "acquisition_error" not in app.session_state
+    fetch.assert_not_called()
+
+
+@pytest.mark.parametrize("hours, sequence_valid", [((1, 2), "YES"), ((0, 2), "NO")])
+def test_snapshot_incomplete_coverage_remains_visible(
+    fetch: Mock, snapshot_upload: tuple[Mock, Mock],
+    hours: tuple[int, ...], sequence_valid: str,
+) -> None:
+    from io import BytesIO
+    from crypto_trader.data.snapshots import serialize_snapshot
+
+    uploader, decoder = snapshot_upload
+    uploader.return_value = BytesIO(serialize_snapshot(acquisition_result(hours)))
+    app = AppTest.from_file(APP).run()
+    app.radio[0].set_value("Saved snapshot").run()
+    app.button[0].click().run()
+    assert not app.exception
+    assert metrics(app)["MISSING EXPECTED"] == "1"
+    assert metrics(app)["COVERAGE COMPLETE"] == "NO"
+    assert metrics(app)["SEQUENCE VALID"] == sequence_valid
+    assert len(app.dataframe[-1].value) == 2
+    if sequence_valid == "NO":
+        assert app.dataframe[0].value.to_dict("records")[0]["CODE"] == "GAP"
+    decoder.assert_called_once()
+    fetch.assert_not_called()

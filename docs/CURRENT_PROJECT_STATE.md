@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 1 — market-data foundation (Task 005B complete and reviewed).
+Phase 1 — market-data foundation (Task 006 complete and reviewed).
 
 ## Current Objective
 
-Provide reproducible local snapshots of reviewed historical acquisition results.
+Inspect validated historical data from public acquisition or saved snapshots in the research terminal.
 
 ## Scope
 
@@ -16,9 +16,15 @@ BTC/USDT spot research on hourly bars from one public venue, long or flat, no le
 
 The reviewed market-data pipeline plus a local Streamlit and Plotly research terminal. The terminal provides explicit UTC range and `as_of` controls, closed-candle status, OHLCV candlestick and volume views, normalized data tables, sequence issues, requested-range coverage, and read-only system boundaries. AI copilot space is visibly reserved but not implemented.
 
-Task 005B implements versioned JSON snapshots through explicit offline save/load and byte serialization APIs. Exact Decimal representations and observation order are preserved; quality reports are recomputed, forged metadata is rejected, and atomic hard-link publication refuses existing destinations. Persistence is separate from the terminal. See the [Task 005 specification](TASK_005_PERSISTENCE.md).
+Task 005B implements versioned JSON snapshots through explicit offline save/load and byte serialization APIs. Exact Decimal representations and observation order are preserved; quality reports are recomputed, forged metadata is rejected, and atomic hard-link publication refuses existing destinations. Snapshot saving remains separate from the terminal. See the [Task 005 specification](TASK_005_PERSISTENCE.md).
+
+Task 006 adds a default public Binance / saved snapshot source radio, a JSON uploader bounded to 10 MB, and explicit in-memory LOAD SNAPSHOT validation. Source switches clear result/error/provenance; file selection alone retains displayed data. Successful loads use snapshot provenance and the shared chart, exact table, and quality rendering. Failures clear previous results and show a snapshot-specific error. No save/export controls, dependencies, network behavior, strategies, or execution were added.
 
 ## Validated
+
+Task 006: 287 tests pass, including all 13 retained Binance AppTest cases and four snapshot cases. The uploader is mocked with BytesIO because AppTest does not support that widget; the real deserializer is exercised with valid and checksum-corrupt bytes. Tests cover exact chart/table parity, button-only validation, selection retention, load failure/recovery, both source transitions, disabled loading without a file, and incomplete coverage/sequence issues. Network is blocked and snapshot disk APIs are guarded. Installed Streamlit 1.63.0 supports `max_upload_size`; the uploader passes 10 explicitly. Lead diff review, source compilation, and visual inspection of the source controls, real upload widget, disabled button, and empty state passed. With optional UI imports blocked, 270 tests pass and one module skips.
+
+Live-preview limitation: browser fetches encountered transport failures (a separate fetch identified a TLS handshake timeout); the UI correctly displayed the failure. Separate public-source checks returned 168 valid, fully covered hourly candles for January 1–7, 2024. A manual fetch with a 30-second timeout created a temporary snapshot for the user to inspect. The native file chooser cannot be automated in Codex, so real browser file selection remains a manual check; uploaded-byte behavior is covered by AppTest. No timeout defaults, automatic retries, or acquisition semantics changed.
 
 Task 005B: 283 tests pass, including 175 snapshot cases covering strict schema/domain validation, Decimal context independence, exact roundtrips, I/O and cleanup failures, short writes, interrupted operations, and competing publishers. With optional UI imports blocked, 270 tests pass and one module skips. Independent disk roundtrip, source compilation, dependency checks, diff review, and visual inspection of the unchanged terminal's initial state passed. No new network fetch or backtest was needed.
 
@@ -49,6 +55,6 @@ Initial decisions and the Task 002 through Task 005B market-data, interface, and
 
 ## Next Actions
 
-Define the next bounded milestone: offline snapshot inspection in the research terminal. Its controls and error behavior need a separate specification before implementation. Task 005B itself is complete; no later milestone has started.
+Task 006 is complete. Define the next bounded research milestone before adding calculations or trading behavior; no subsequent milestone has started.
 
 Task 005A verification: reviewed the specification against the existing data contracts, corrected publication-failure semantics, and reran the unchanged suite (108 passed). Only documentation changed; no new browser session or backtest was run. The Task 004.5 visual evidence above applies to the unchanged app.

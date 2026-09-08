@@ -12,6 +12,7 @@ from crypto_trader.data import (
     BinanceKlineAcquisitionResult,
     fetch_binance_spot_klines,
 )
+from crypto_trader.data.snapshots import SnapshotValidationError, deserialize_snapshot
 from crypto_trader.ui import (
     bars_to_chart_values,
     bars_to_table_rows,
@@ -21,6 +22,15 @@ from crypto_trader.ui import (
 )
 
 UTC = timezone.utc
+SNAPSHOT_MAX_UPLOAD_MB = 10
+BINANCE_SOURCE = "Public Binance"
+SNAPSHOT_SOURCE = "Saved snapshot"
+
+
+def _clear_source_state() -> None:
+    """Discard displayed data and errors when the inspection source changes."""
+    for key in ("acquisition_result", "acquisition_error", "provenance"):
+        st.session_state.pop(key, None)
 
 
 def _utc_datetime(day: date, clock: time) -> datetime:
@@ -131,15 +141,16 @@ def _render_quality(result: BinanceKlineAcquisitionResult) -> None:
     range_columns[2].metric("EFFECTIVE END", format_utc_timestamp(result.effective_end))
     st.caption(f"AS OF USED · {format_utc_timestamp(result.as_of)}")
 
-    quality_columns = st.columns(5)
-    quality_columns[0].metric("EXPECTED BARS", result.coverage.expected_bar_count)
-    quality_columns[1].metric(
+    count_columns = st.columns(2)
+    count_columns[0].metric("EXPECTED BARS", result.coverage.expected_bar_count)
+    count_columns[1].metric(
         "OBSERVED UNIQUE ALIGNED",
         result.coverage.observed_unique_aligned_bar_count,
     )
-    quality_columns[2].metric("MISSING EXPECTED", result.coverage.missing_expected_bar_count)
-    quality_columns[3].metric("COVERAGE COMPLETE", "YES" if result.coverage.is_complete else "NO")
-    quality_columns[4].metric("SEQUENCE VALID", "YES" if result.sequence_validation.is_valid else "NO")
+    quality_columns = st.columns(3)
+    quality_columns[0].metric("MISSING EXPECTED", result.coverage.missing_expected_bar_count)
+    quality_columns[1].metric("COVERAGE COMPLETE", "YES" if result.coverage.is_complete else "NO")
+    quality_columns[2].metric("SEQUENCE VALID", "YES" if result.sequence_validation.is_valid else "NO")
 
     if result.end_was_capped:
         st.info(
@@ -195,7 +206,11 @@ st.markdown(
     .terminal-panel b { color:var(--green); font-weight:500; }
     div[data-testid="stMetric"] { background:var(--panel); border-left:1px solid var(--line); padding:.55rem .65rem; }
     div[data-testid="stMetricValue"] { font:600 1rem "IBM Plex Mono",Menlo,monospace; }
-    div[data-testid="stMetricValue"] > div, div[data-testid="stMetricLabel"] p { white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
+    div[data-testid="stMetricValue"], div[data-testid="stMetricValue"] *,
+    div[data-testid="stMetricLabel"], div[data-testid="stMetricLabel"] * {
+      white-space:normal !important; overflow:visible !important;
+      overflow-wrap:anywhere !important; text-overflow:clip !important;
+    }
     div[data-testid="stMetricLabel"] { font-family:"IBM Plex Mono",Menlo,monospace; letter-spacing:.06em; }
     div[data-testid="stDataFrame"] { border:1px solid var(--line); }
     .stButton > button { width:100%; border-radius:1px; border:1px solid var(--amber); background:#1a150c; color:#efc66f; font:600 .73rem "IBM Plex Mono",Menlo,monospace; letter-spacing:.08em; }
@@ -223,20 +238,35 @@ current_hour = now_utc.replace(minute=0, second=0, microsecond=0)
 
 with st.sidebar:
     st.markdown('<div class="section-kicker">ACQUISITION CONTROL</div>', unsafe_allow_html=True)
-    start_date = st.date_input("REQUESTED START DATE", value=(current_hour - timedelta(days=7)).date())
-    start_time = st.time_input("REQUESTED START TIME (UTC)", value=time(0, 0), step=timedelta(hours=1))
-    end_date = st.date_input("REQUESTED END DATE", value=current_hour.date())
-    end_time = st.time_input("REQUESTED END TIME (UTC)", value=current_hour.time(), step=timedelta(hours=1))
-    use_current_as_of = st.checkbox("USE CURRENT UTC AT FETCH", value=True)
-    as_of_date = st.date_input("AS OF DATE", value=now_utc.date(), disabled=use_current_as_of)
-    as_of_time = st.time_input(
-        "AS OF TIME (UTC)",
-        value=now_utc.replace(microsecond=0).time(),
-        step=timedelta(minutes=1),
-        disabled=use_current_as_of,
+    source = st.radio(
+        "SOURCE", (BINANCE_SOURCE, SNAPSHOT_SOURCE), key="source_mode",
+        on_change=_clear_source_state,
     )
-    fetch_clicked = st.button("FETCH HISTORICAL DATA", type="primary")
-    st.caption("Acquisition occurs once per explicit button action. No polling, retries, or persistence.")
+    fetch_clicked = False
+    load_clicked = False
+    if source == BINANCE_SOURCE:
+        start_date = st.date_input("REQUESTED START DATE", value=(current_hour - timedelta(days=7)).date())
+        start_time = st.time_input("REQUESTED START TIME (UTC)", value=time(0, 0), step=timedelta(hours=1))
+        end_date = st.date_input("REQUESTED END DATE", value=current_hour.date())
+        end_time = st.time_input("REQUESTED END TIME (UTC)", value=current_hour.time(), step=timedelta(hours=1))
+        use_current_as_of = st.checkbox("USE CURRENT UTC AT FETCH", value=True)
+        as_of_date = st.date_input("AS OF DATE", value=now_utc.date(), disabled=use_current_as_of)
+        as_of_time = st.time_input(
+            "AS OF TIME (UTC)",
+            value=now_utc.replace(microsecond=0).time(),
+            step=timedelta(minutes=1),
+            disabled=use_current_as_of,
+        )
+        fetch_clicked = st.button("FETCH HISTORICAL DATA", type="primary")
+        st.caption("Acquisition occurs once per explicit button action. No polling, retries, or persistence.")
+    else:
+        uploaded_snapshot = st.file_uploader(
+            "SNAPSHOT JSON", type=["json"], max_upload_size=SNAPSHOT_MAX_UPLOAD_MB,
+        )
+        load_clicked = st.button(
+            "LOAD SNAPSHOT", type="primary", disabled=uploaded_snapshot is None,
+        )
+        st.caption("Offline inspection occurs only on LOAD SNAPSHOT. Maximum upload: 10 MB.")
 
 if fetch_clicked:
     try:
@@ -252,10 +282,21 @@ if fetch_clicked:
             requested_end,
             as_of=explicit_as_of,
         )
+        st.session_state["provenance"] = "binance"
         st.session_state.pop("acquisition_error", None)
     except (BinanceKlineAcquisitionError, TypeError, ValueError) as error:
         st.session_state["acquisition_error"] = str(error)
         st.session_state.pop("acquisition_result", None)
+        st.session_state.pop("provenance", None)
+
+if load_clicked and uploaded_snapshot is not None:
+    try:
+        st.session_state["acquisition_result"] = deserialize_snapshot(uploaded_snapshot.getvalue())
+        st.session_state["provenance"] = "snapshot"
+        st.session_state.pop("acquisition_error", None)
+    except SnapshotValidationError as error:
+        _clear_source_state()
+        st.session_state["acquisition_error"] = str(error)
 
 result = st.session_state.get("acquisition_result")
 error_message = st.session_state.get("acquisition_error")
@@ -263,16 +304,27 @@ error_message = st.session_state.get("acquisition_error")
 _render_status_strip(result)
 
 if error_message:
-    st.error(f"ACQUISITION FAILED · {error_message}")
+    error_label = "SNAPSHOT LOAD FAILED" if source == SNAPSHOT_SOURCE else "ACQUISITION FAILED"
+    st.error(f"{error_label} · {error_message}")
 
 if result is None:
     st.markdown('<div class="section-kicker">MARKET DATA // AWAITING REQUEST</div>', unsafe_allow_html=True)
-    st.info("Set an explicit UTC research range and select FETCH HISTORICAL DATA.")
-else:
-    st.caption(
-        "Showing the last successful fetch with the result boundaries and AS OF used below. "
-        "Changes to acquisition controls apply only to the next explicit fetch."
+    st.info(
+        "Select a saved snapshot JSON file and select LOAD SNAPSHOT."
+        if source == SNAPSHOT_SOURCE
+        else "Set an explicit UTC research range and select FETCH HISTORICAL DATA."
     )
+else:
+    if st.session_state.get("provenance") == "snapshot":
+        st.caption(
+            "Showing the last validated snapshot with the result boundaries and AS OF used below. "
+            "File changes apply only to the next explicit load. The checksum is not authentication."
+        )
+    else:
+        st.caption(
+            "Showing the last successful fetch with the result boundaries and AS OF used below. "
+            "Changes to acquisition controls apply only to the next explicit fetch."
+        )
     _render_quality(result)
     st.markdown('<div class="section-kicker">MARKET CHART // CLOSED HOURLY CANDLES</div>', unsafe_allow_html=True)
     if result.bars:
@@ -303,7 +355,8 @@ INTERVAL        1H
 TIME STANDARD   UTC
 MODE            RESEARCH ONLY
 EXECUTION       DISABLED
-PERSISTENCE     DISABLED
+AUTOMATIC SAVING DISABLED
+SNAPSHOT INSPECTION AVAILABLE (OFFLINE)
 AI AGENTS       NOT ENABLED</div>""",
         unsafe_allow_html=True,
     )

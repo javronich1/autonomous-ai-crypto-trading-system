@@ -83,3 +83,15 @@ Decisions are append-only in spirit: later changes should add a superseding entr
 | Reuse existing private pure acquisition helpers within the data package | Coverage and datetime normalization remain shared without changing reviewed acquisition behavior or its public API. |
 | Preserve owned-resource cleanup on interrupted operations and reject short writes before publication | Failure tests verify that incomplete bytes are never published and existing or competing destinations remain untouched. |
 | Keep terminal snapshot integration for the next separately specified milestone | The completed API can persist research evidence without broadening the UI or introducing trading behavior. |
+
+
+## Task 006 bounded offline snapshot inspection — 2026-09-08 (reviewed)
+
+| Decision | Rationale |
+|---|---|
+| Add saved snapshot inspection alongside default public Binance acquisition | Reuses the reviewed result contract and existing chart/table/quality rendering without changing acquisition defaults or research assumptions. Supersedes the earlier deferral of terminal snapshot inspection only. |
+| Limit the JSON uploader to 10 MB using explicit `max_upload_size=10` | Installed Streamlit 1.63.0 signature supports the bound; no dependency change is needed. |
+| Deserialize uploaded `getvalue()` bytes only on LOAD SNAPSHOT | The reviewed deserializer validates in memory without filesystem or network access. Selection alone must not replace evidence currently displayed. |
+| Store successful result provenance; clear result, error, and provenance on source changes via callback | Retained results keep truthful captions; failed loads clear prior evidence and report snapshot-specific errors. |
+| State that checksums are not authentication and retain incomplete quality reports | Validation establishes contract/integrity, not authentic origin or research suitability. No filename is interpolated into unsafe HTML. |
+| Keep automatic saving disabled and expose no save/export controls | This milestone is inspection only; the separate persistence API remains unchanged. |
