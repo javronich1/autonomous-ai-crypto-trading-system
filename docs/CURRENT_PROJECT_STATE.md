@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 1 — market-data foundation (Task 006 complete and reviewed).
+Phase 1 — market-data foundation (Task 007 complete and reviewed).
 
 ## Current Objective
 
-Inspect validated historical data from public acquisition or saved snapshots in the research terminal.
+Inspect and explicitly export validated historical data from public acquisition or saved snapshots in the research terminal.
 
 ## Scope
 
@@ -18,9 +18,11 @@ The reviewed market-data pipeline plus a local Streamlit and Plotly research ter
 
 Task 005B implements versioned JSON snapshots through explicit offline save/load and byte serialization APIs. Exact Decimal representations and observation order are preserved; quality reports are recomputed, forged metadata is rejected, and atomic hard-link publication refuses existing destinations. Snapshot saving remains separate from the terminal. See the [Task 005 specification](TASK_005_PERSISTENCE.md).
 
-Task 006 adds a default public Binance / saved snapshot source radio, a JSON uploader bounded to 10 MB, and explicit in-memory LOAD SNAPSHOT validation. Source switches clear result/error/provenance; file selection alone retains displayed data. Successful loads use snapshot provenance and the shared chart, exact table, and quality rendering. Failures clear previous results and show a snapshot-specific error. No save/export controls, dependencies, network behavior, strategies, or execution were added.
+Task 006 adds a default public Binance / saved snapshot source radio, a JSON uploader bounded to 10 MB, and explicit in-memory LOAD SNAPSHOT validation. Task 007 adds an explicit browser download of the canonical serialized bytes for any displayed validated result, with deterministic boundary-derived naming; it performs no filesystem persistence. Source switches clear result/error/provenance; file selection alone retains displayed data. Successful loads use snapshot provenance and the shared chart, exact table, quality rendering, and export. Failures clear previous results and show a snapshot-specific error. No calculations, trading, or backtesting were added.
 
 ## Validated
+
+Task 007: 293 tests pass. Focused UI verification covers exact canonical export bytes and download metadata for both public Binance and uploaded-snapshot provenance, deterministic UTC filenames, retained-result stability, and export removal after errors or source switches. Tests block network access and guard the snapshot disk APIs. Dependency and whitespace checks pass. Browser validation confirmed that the export is absent before a result exists and appears below the exact OHLCV table after an explicit public fetch; that fetch displayed 189 complete, aligned hourly bars with a valid sequence. No backtester exists, so no backtest was run.
 
 Task 006: 287 tests pass, including all 13 retained Binance AppTest cases and four snapshot cases. The uploader is mocked with BytesIO because AppTest does not support that widget; the real deserializer is exercised with valid and checksum-corrupt bytes. Tests cover exact chart/table parity, button-only validation, selection retention, load failure/recovery, both source transitions, disabled loading without a file, and incomplete coverage/sequence issues. Network is blocked and snapshot disk APIs are guarded. Installed Streamlit 1.63.0 supports `max_upload_size`; the uploader passes 10 explicitly. Lead diff review, source compilation, and visual inspection of the source controls, real upload widget, disabled button, and empty state passed. With optional UI imports blocked, 270 tests pass and one module skips.
 
@@ -42,7 +44,7 @@ None.
 
 ## Decisions Made
 
-Initial decisions and the Task 002 through Task 005B market-data, interface, and snapshot decisions are recorded in `DECISIONS.md`.
+Initial decisions and the Task 002 through Task 007 market-data, interface, snapshot, inspection, and export decisions are recorded in `DECISIONS.md`.
 
 ## Known Risks / Open Questions
 
@@ -55,6 +57,6 @@ Initial decisions and the Task 002 through Task 005B market-data, interface, and
 
 ## Next Actions
 
-Task 006 is complete. Define the next bounded research milestone before adding calculations or trading behavior; no subsequent milestone has started.
+Task 007 is complete and reviewed. Define the next bounded research milestone before adding calculations or trading behavior; no subsequent milestone has started.
 
 Task 005A verification: reviewed the specification against the existing data contracts, corrected publication-failure semantics, and reran the unchanged suite (108 passed). Only documentation changed; no new browser session or backtest was run. The Task 004.5 visual evidence above applies to the unchanged app.

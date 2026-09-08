@@ -16,6 +16,7 @@ from crypto_trader.ui import (
     bars_to_table_rows,
     coverage_percentage,
     format_utc_timestamp,
+    validated_snapshot_filename,
     validation_issues_to_rows,
 )
 
@@ -110,3 +111,22 @@ def test_utc_format_normalizes_aware_offset() -> None:
 def test_utc_format_rejects_naive_timestamp() -> None:
     with pytest.raises(ValueError, match="timezone-aware"):
         format_utc_timestamp(datetime(2024, 1, 1))
+
+
+def test_validated_snapshot_filename_is_utc_and_deterministic() -> None:
+    plus_two = timezone(timedelta(hours=2))
+    assert validated_snapshot_filename(
+        datetime(2024, 1, 1, 2, tzinfo=plus_two),
+        datetime(2024, 1, 1, 5, 30, tzinfo=plus_two),
+    ) == "btcusdt_1h_20240101T000000Z_20240101T033000Z.snapshot.json"
+
+
+@pytest.mark.parametrize("naive_position", [0, 1])
+def test_validated_snapshot_filename_rejects_naive_timestamp(
+    naive_position: int,
+) -> None:
+    aware = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    timestamps = [aware, aware]
+    timestamps[naive_position] = datetime(2024, 1, 1)
+    with pytest.raises(ValueError, match="timezone-aware"):
+        validated_snapshot_filename(*timestamps)

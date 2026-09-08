@@ -5,6 +5,7 @@ from crypto_trader.ui.presentation import (
     bars_to_table_rows,
     coverage_percentage,
     format_utc_timestamp,
+    validated_snapshot_filename,
     validation_issues_to_rows,
 )
 
@@ -13,5 +14,6 @@ __all__ = [
     "bars_to_table_rows",
     "coverage_percentage",
     "format_utc_timestamp",
+    "validated_snapshot_filename",
     "validation_issues_to_rows",
 ]

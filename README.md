@@ -62,7 +62,7 @@ Launch the read-only terminal from the repository root:
 streamlit run apps/research_terminal.py
 ```
 
-The terminal is for historical market-data research only. It has no account access, automatic saving, snapshot-save controls, strategy, order, execution, paper-trading, or live-trading functionality. Standard chart/table download tools are presentation features, not validated snapshot exports.
+The terminal is for historical market-data research only. It has no account access, automatic saving, snapshot-save controls, strategy, order, execution, paper-trading, or live-trading functionality. Task 007 provides one explicit browser export of the canonical validated snapshot bytes for a displayed result; it performs no local persistence.
 
 The sidebar defaults to **Public Binance**, retaining explicit UTC acquisition controls. Select **Saved snapshot** to inspect an existing JSON snapshot (maximum 10 MB), then press **LOAD SNAPSHOT**. Only that button validates uploaded bytes in memory through the reviewed snapshot deserializer; snapshot inspection does not read or write local paths or access the network. Selecting, replacing, or removing a file retains the last validated result until another load or source switch. Failed loads clear the previous result; switching source clears results and errors. Original boundaries and recomputed quality remain visible, including incomplete coverage. SHA-256 integrity is not authentication.
 

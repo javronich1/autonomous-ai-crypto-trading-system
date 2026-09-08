@@ -18,6 +18,16 @@ def format_utc_timestamp(value: datetime) -> str:
     return value.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
 
+def validated_snapshot_filename(requested_start: datetime, effective_end: datetime) -> str:
+    """Return the deterministic browser filename for a validated snapshot."""
+    for value in (requested_start, effective_end):
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("snapshot filename timestamps must be timezone-aware")
+    start_text = requested_start.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    end_text = effective_end.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"btcusdt_1h_{start_text}_{end_text}.snapshot.json"
+
+
 def bars_to_chart_values(bars: Sequence[OHLCVBar]) -> ChartValues:
     """Convert trusted decimals to floats only at the Plotly boundary."""
     return {

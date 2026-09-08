@@ -95,3 +95,11 @@ Decisions are append-only in spirit: later changes should add a superseding entr
 | Store successful result provenance; clear result, error, and provenance on source changes via callback | Retained results keep truthful captions; failed loads clear prior evidence and report snapshot-specific errors. |
 | State that checksums are not authentication and retain incomplete quality reports | Validation establishes contract/integrity, not authentic origin or research suitability. No filename is interpolated into unsafe HTML. |
 | Keep automatic saving disabled and expose no save/export controls | This milestone is inspection only; the separate persistence API remains unchanged. |
+
+## Task 007 explicit validated snapshot export — 2026-09-08 (reviewed)
+
+| Decision | Rationale |
+|---|---|
+| Offer one explicit browser download for every displayed validated result using `serialize_snapshot(result)` exactly | Makes the reviewed canonical bytes reproducible for both Binance and uploaded-snapshot provenance without local writes, network access, or automatic saving. |
+| Derive the safe filename only from fixed market identity and the result's requested start/effective end UTC boundaries | Identical validated boundaries produce deterministic names; retained results keep their original bytes and name across control/file changes. |
+| Describe export as client-initiated, browser-managed, and checksum-based rather than authenticated | Communicates the boundary accurately without introducing provenance or security claims. |

@@ -14,6 +14,7 @@ pytest.importorskip("plotly", reason="optional UI dependencies are not installed
 AppTest = pytest.importorskip("streamlit.testing.v1").AppTest
 
 import crypto_trader.data as data
+import crypto_trader.data.snapshots as snapshots
 
 UTC = timezone.utc
 START = datetime(2024, 1, 1, tzinfo=UTC)
@@ -84,6 +85,31 @@ def manual_request() -> AppTest:
 def metrics(app: AppTest) -> dict[str, str]:
     """Read displayed metrics by their user-visible labels."""
     return {metric.label: metric.value for metric in app.metric}
+
+
+@pytest.fixture
+def download(monkeypatch: pytest.MonkeyPatch) -> Mock:
+    """Capture browser-download arguments without writing a file."""
+    import streamlit
+
+    button = Mock(return_value=False)
+    monkeypatch.setattr(streamlit, "download_button", button)
+    return button
+
+
+def assert_validated_download(
+    download: Mock, expected: data.BinanceKlineAcquisitionResult
+) -> None:
+    """Assert the single export is the canonical byte stream and stable metadata."""
+    download.assert_called_once_with(
+        "DOWNLOAD VALIDATED SNAPSHOT",
+        data=snapshots.serialize_snapshot(expected),
+        file_name="btcusdt_1h_20240101T000000Z_20240101T030000Z.snapshot.json",
+        mime="application/json",
+        on_click="ignore",
+        type="secondary",
+        width="stretch",
+    )
 
 
 def test_initial_render_and_every_control_change_never_fetch(fetch: Mock) -> None:
@@ -281,6 +307,39 @@ def test_control_changes_keep_original_result_boundaries_and_notice(fetch: Mock)
     assert "AS OF USED · 2024-01-01 03:30:00 UTC" in captions
 
 
+def test_fetch_export_is_exact_retained_and_cleared(
+    fetch: Mock, download: Mock
+) -> None:
+    app = manual_request()
+    download.assert_not_called()
+
+    app.button[0].click().run()
+    assert not app.exception
+    assert_validated_download(download, acquisition_result())
+
+    download.reset_mock()
+    app.date_input[0].set_value(date(2024, 2, 2)).run()
+    assert_validated_download(download, acquisition_result())
+
+    download.reset_mock()
+    app.radio[0].set_value("Saved snapshot").run()
+    download.assert_not_called()
+    assert "acquisition_result" not in app.session_state
+
+
+def test_failed_fetch_removes_validated_export(fetch: Mock, download: Mock) -> None:
+    app = manual_request().button[0].click().run()
+    assert not app.exception
+    assert_validated_download(download, acquisition_result())
+
+    download.reset_mock()
+    fetch.side_effect = data.BinanceKlineAcquisitionError("offline")
+    app.button[0].click().run()
+    assert not app.exception
+    download.assert_not_called()
+    assert "acquisition_result" not in app.session_state
+
+
 @pytest.fixture
 def snapshot_upload(monkeypatch: pytest.MonkeyPatch) -> tuple[Mock, Mock]:
     """Mock the unsupported uploader while exercising the real byte validator."""
@@ -334,6 +393,27 @@ def test_snapshot_explicit_load_matches_fetch_exactly(
     assert "Showing the last successful fetch" not in captions
     app.run()
     assert decoder.call_count == 1
+    fetch.assert_not_called()
+
+
+def test_snapshot_export_uses_canonical_bytes_and_retains_loaded_result(
+    fetch: Mock, snapshot_upload: tuple[Mock, Mock], download: Mock
+) -> None:
+    uploader, _ = snapshot_upload
+    expected = acquisition_result()
+    app = AppTest.from_file(APP).run()
+    app.radio[0].set_value("Saved snapshot").run()
+    download.assert_not_called()
+
+    app.button[0].click().run()
+    assert not app.exception
+    assert app.session_state["provenance"] == "snapshot"
+    assert_validated_download(download, expected)
+
+    download.reset_mock()
+    uploader.return_value = None
+    app.run()
+    assert_validated_download(download, expected)
     fetch.assert_not_called()
 
 

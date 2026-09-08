@@ -12,12 +12,17 @@ from crypto_trader.data import (
     BinanceKlineAcquisitionResult,
     fetch_binance_spot_klines,
 )
-from crypto_trader.data.snapshots import SnapshotValidationError, deserialize_snapshot
+from crypto_trader.data.snapshots import (
+    SnapshotValidationError,
+    deserialize_snapshot,
+    serialize_snapshot,
+)
 from crypto_trader.ui import (
     bars_to_chart_values,
     bars_to_table_rows,
     coverage_percentage,
     format_utc_timestamp,
+    validated_snapshot_filename,
     validation_issues_to_rows,
 )
 
@@ -344,6 +349,23 @@ else:
         hide_index=True,
         height=360,
     )
+    st.markdown(
+        '<div class="section-kicker">REPRODUCIBLE SNAPSHOT // EXPLICIT EXPORT</div>',
+        unsafe_allow_html=True,
+    )
+    st.download_button(
+        "DOWNLOAD VALIDATED SNAPSHOT",
+        data=serialize_snapshot(result),
+        file_name=validated_snapshot_filename(result.requested_start, result.effective_end),
+        mime="application/json",
+        on_click="ignore",
+        type="secondary",
+        width="stretch",
+    )
+    st.caption(
+        "Client-initiated canonical validated bytes. Existing files are handled by your browser. "
+        "The checksum detects accidental changes but does not authenticate origin."
+    )
 
 bottom_left, bottom_right = st.columns([1.25, 1])
 with bottom_left:
@@ -356,6 +378,7 @@ TIME STANDARD   UTC
 MODE            RESEARCH ONLY
 EXECUTION       DISABLED
 AUTOMATIC SAVING DISABLED
+VALIDATED EXPORT AVAILABLE
 SNAPSHOT INSPECTION AVAILABLE (OFFLINE)
 AI AGENTS       NOT ENABLED</div>""",
         unsafe_allow_html=True,
