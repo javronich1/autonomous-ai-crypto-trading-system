@@ -2,7 +2,7 @@
 
 ## Status
 
-Task 005A is the design milestone. Task 005B will implement and verify it. Task 004.5 remains complete. Persistence is not implemented yet.
+Task 005A design and Task 005B implementation are complete and reviewed. Task 004.5 remains complete. Snapshot persistence is implemented as a separate offline API; the terminal does not yet save or load snapshots.
 
 ## Scope
 
@@ -94,7 +94,7 @@ Validation occurs on both save and load.
 - Noncanonical timestamp and decimal strings are rejected
 - Invalid OHLCV values, inconsistent bounds, and out-of-range bars are rejected
 
-Decimal canonicality is defined as `str(Decimal(text)) == text` after parsing, without normalizing `Decimal` scale. The reader must not coerce numbers to strings or silently ignore fields.
+Decimal canonicality is defined as `str(Decimal(text)) == text` with a local Decimal context using `capitals=1`, without normalizing scale. Serialization uses the same uppercase exponent convention independently of caller context. Parsing also uses a local context so rejected decimal strings do not set caller flags. The reader must not coerce numbers to strings or silently ignore fields.
 
 ## Result semantics
 
@@ -152,7 +152,7 @@ Publication occurs at successful hard link creation. Post-publication cleanup fa
 
 Task 005A documents the design only.
 
-Task 005B will verify:
+Task 005B verifies:
 
 - Exact `Decimal.as_tuple` and timestamp/as_of microsecond roundtrips
 - Deterministic bytes, source, and schema handling
@@ -169,6 +169,8 @@ Tests use temporary directories; production callers choose their destination exp
 ## Verification Plan
 
 Task 005B will run the full offline suite, focused filesystem tests, diff review, compile checks, and a manual local roundtrip smoke test. If shared acquisition helpers change, the existing Streamlit smoke regression will also be run. No network access is required. There is no backtest yet. A scope and review gate remain explicit before calling implementation complete.
+
+Completed review — 2026-09-08: 283 tests pass (108 existing and 175 snapshot cases). With optional UI imports blocked, 270 pass and one integration module skips. The reviewer independently checked a disk roundtrip retaining duplicate/out-of-order observations, quality reports, signed-zero scale, microsecond `as_of`, deterministic bytes, and overwrite refusal. Source compilation and dependency checks passed. The unchanged terminal's initial state was visually inspected. No backtester exists. Existing acquisition helpers are reused directly; acquisition, UI code, and dependencies were not modified.
 
 ## Implementation references
 

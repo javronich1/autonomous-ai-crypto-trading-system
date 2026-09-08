@@ -74,3 +74,12 @@ Decisions are append-only in spirit: later changes should add a superseding entr
 | Use atomic local POSIX publication with hard-link fail-if-exists semantics | Ensures exactly one concurrent publisher can win and prevents silent overwrites or replace-in-place behavior. |
 | Keep persistence offline and local-only, with UI integration separately scoped | UI integration, network access, retries, caches, and repair logic are intentionally deferred to later work. |
 | Report post-publication cleanup failure through `SnapshotCleanupError` with `published=True` and both paths | Callers can distinguish a saved snapshot from a failed publication without depending on warning filters. |
+
+## Task 005B snapshot implementation review — 2026-09-08
+
+| Decision | Rationale |
+|---|---|
+| Fix Decimal exponent spelling to uppercase in a local context | Review reproduced differing hashes and read failures under caller `capitals=0`; canonical bytes must be independent of caller formatting settings without rounding or changing scale. Parsing also isolates caller flags. |
+| Reuse existing private pure acquisition helpers within the data package | Coverage and datetime normalization remain shared without changing reviewed acquisition behavior or its public API. |
+| Preserve owned-resource cleanup on interrupted operations and reject short writes before publication | Failure tests verify that incomplete bytes are never published and existing or competing destinations remain untouched. |
+| Keep terminal snapshot integration for the next separately specified milestone | The completed API can persist research evidence without broadening the UI or introducing trading behavior. |

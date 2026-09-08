@@ -6,7 +6,7 @@ It is **not** a guaranteed-profit trading bot. Profitability is an empirical hyp
 
 ## Current status
 
-The repository is in **Phase 1: market-data foundation**. The reviewed pipeline provides an exact-decimal OHLCV contract, hourly sequence validation, a Binance Spot adapter, and historical acquisition with explicit UTC boundaries and requested-range coverage. Task 004.5 adds a reviewed local read-only research terminal. No persistence, strategy, backtest, risk engine, execution, paper-trading, or real-money functionality exists.
+The repository is in **Phase 1: market-data foundation**. The reviewed pipeline provides an exact-decimal OHLCV contract, hourly sequence validation, a Binance Spot adapter, and historical acquisition with explicit UTC boundaries and requested-range coverage. Task 004.5 adds a reviewed local read-only research terminal. Task 005B adds explicit offline JSON snapshot save/load with integrity validation and protection against overwrites. No strategy, backtest, risk engine, execution, paper-trading, or real-money functionality exists.
 
 ## Initial scope
 
@@ -63,3 +63,24 @@ streamlit run apps/research_terminal.py
 ```
 
 The terminal is for historical market-data research only. It has no account access, persistence, strategy, order, execution, paper-trading, or live-trading functionality.
+
+## Local data snapshots
+
+Given an existing `BinanceKlineAcquisitionResult` named `result`, save and reload it without network access:
+
+```python
+from pathlib import Path
+from crypto_trader.data.snapshots import save_snapshot, load_snapshot
+
+directory = Path("data")  # ignored by Git
+directory.mkdir(exist_ok=True)  # explicit caller action
+destination = directory / "btc_snapshot.json"
+save_snapshot(result, destination)  # refuses any existing destination
+restored = load_snapshot(destination)
+```
+
+Snapshots preserve exact Decimal values, original observation order, UTC boundaries, and independently recomputed sequence/coverage reports. Incomplete data stays incomplete. The API does not fetch, merge, repair, or automatically save terminal results. In-memory equivalents are `serialize_snapshot` and `deserialize_snapshot`.
+
+Invalid snapshots raise `SnapshotValidationError`; filesystem failures raise `SnapshotIOError`. Catch `SnapshotCleanupError` before its parent `SnapshotIOError`: `published=True` means the complete destination already exists, while `temporary_path` identifies a leftover temporary file. Do not blindly retry that outcome.
+
+Publication requires a local POSIX filesystem supporting hard links. Snapshots are never overwritten by this API, but external edits remain possible. SHA-256 detects accidental changes, not authenticity; power-loss durability of directory entries is not guaranteed. See [Task 005](docs/TASK_005_PERSISTENCE.md) for the contract and tested failure cases.
